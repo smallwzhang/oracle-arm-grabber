@@ -54,6 +54,8 @@ oci setup oci-cli-config
 ssh-keygen -t ed25519 -f ~/.ssh/oracle_ssh_key -N ""
 ```
 
+> ⚠️ **Note**: This generates a passphrase-less key for automation convenience. Ensure `~/.ssh/` directory permissions are secure (`chmod 700 ~/.ssh`). If your server is compromised, this key grants direct access to any OCI instance using it.
+
 ### 4. Prepare Network Resources
 
 You need a VCN with:
@@ -194,6 +196,8 @@ oci setup oci-cli-config
 ```bash
 ssh-keygen -t ed25519 -f ~/.ssh/oracle_ssh_key -N ""
 ```
+
+> ⚠️ **注意**：此处生成无密码密钥，方便自动化使用。请确保 `~/.ssh/` 目录权限为 700（`chmod 700 ~/.ssh`）。若服务器被入侵，该密钥可直接登录所有使用它的 OCI 实例。
 
 ### 4. 准备网络资源
 
