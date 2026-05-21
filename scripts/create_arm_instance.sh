@@ -3,14 +3,21 @@
 # 只在凌晨 1:00-6:00 运行，检查返回的 Instance ID 是否为 ocid1.instance. 开头
 export SUPPRESS_LABEL_WARNING=True
 export PYTHONWARNINGS=ignore
+export PATH="$PATH:/usr/local/bin"
 
-# ====== USER CONFIGURATION — edit these values ======
+# 文件锁 — 防止多实例并行运行
+LOCK_FILE="/tmp/ora-arm-creator.lock"
+if [ -f "$LOCK_FILE" ] && kill -0 "$(cat "$LOCK_FILE")" 2>/dev/null; then
+    exit 0  # 已有实例在跑，静默退出
+fi
+echo $$ > "$LOCK_FILE"
+trap 'rm -f "$LOCK_FILE"' EXIT
+
 COMPARTMENT="ocid1.tenancy.oc1..YOUR_TENANCY_OCID"
 SUBNET_ID="ocid1.subnet.oc1.YOUR_SUBNET_OCID"
 IMAGE_ID="ocid1.image.oc1.YOUR_IMAGE_OCID"
 AD_NAME="YOUR_AVAILABILITY_DOMAIN"
 SSH_KEY="$HOME/.ssh/oracle_ssh_key.pub"
-# ===================================================
 
 # 时间窗口检查（北京时间）
 # 最佳窗口: 凌晨 1:00-5:00（大阪 2:00-6:00，Oracle 回收释放高峰）
@@ -46,10 +53,16 @@ if [ -n "$INSTANCE_ID" ]; then
     INSTANCE_OCID=$(echo "$INSTANCE_ID" | sed 's/"id": "//')
     # 创建响应本身不含公网IP，需查 VNIC
     sleep 15  # 等实例进入 RUNNING 状态再查 IP
-    PUBLIC_IP=$(oci compute instance list-vnics \
-      --instance-id "$INSTANCE_OCID" \
-      --compartment-id "$COMPARTMENT" \
-      2>/dev/null | grep -oP '"public-ip":\s*"[^"]*"' | head -1 | sed 's/"public-ip": "//;s/"//')
+    # VNIC 查询重试（最多 3 次，间隔 10 秒）
+    PUBLIC_IP=""
+    for attempt in 1 2 3; do
+        PUBLIC_IP=$(oci compute instance list-vnics \
+          --instance-id "$INSTANCE_OCID" \
+          --compartment-id "$COMPARTMENT" \
+          2>/dev/null | grep -oP '"public-ip":\s*"[^"]*"' | head -1 | sed 's/"public-ip": "//;s/"//')
+        [ -n "$PUBLIC_IP" ] && break
+        [ $attempt -lt 3 ] && sleep 10
+    done
     echo "SUCCESS|$INSTANCE_OCID|${PUBLIC_IP:-pending}"
 else
     # 失败 — 提取错误信息摘要（多层回退策略）
