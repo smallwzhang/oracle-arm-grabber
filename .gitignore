@@ -1,0 +1,23 @@
+# OCI config contains sensitive credentials
+.oci/
+
+# Environment / secrets
+.env
+
+# SSH keys
+*.pem
+*.pub
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Logs
+*.log
