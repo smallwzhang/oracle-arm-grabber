@@ -29,7 +29,16 @@
 ### 1. Install OCI CLI
 
 ```bash
-bash -c "$(curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh)"
+# Ubuntu/Debian (recommended)
+sudo apt update && sudo apt install -y oci-cli
+
+# Or via pip
+pip3 install oci
+
+# Manual install (verify checksum)
+curl -LO https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh
+sha256sum install.sh  # verify against official checksum
+bash install.sh
 ```
 
 ### 2. Configure OCI CLI
@@ -161,7 +170,16 @@ MIT
 ### 1. 安装 OCI CLI
 
 ```bash
-bash -c "$(curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh)"
+# Ubuntu/Debian（推荐）
+sudo apt update && sudo apt install -y oci-cli
+
+# 或通过 pip 安装
+pip3 install oci
+
+# 手动安装（建议校验哈希）
+curl -LO https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh
+sha256sum install.sh  # 对比官方校验值
+bash install.sh
 ```
 
 ### 2. 配置 OCI CLI
