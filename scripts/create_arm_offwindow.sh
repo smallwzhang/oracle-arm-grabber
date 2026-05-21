@@ -1,25 +1,35 @@
 #!/bin/bash
-# Oracle ARM Instance Creator — Off-Window Edition
-# 每次只尝试 1 次，靠 cron 频率控制总次数（每20分钟 = 每小时3次）
-export SUPPRESS_LABEL_WARNING=True
-export PYTHONWARNINGS=ignore
-export PATH="$PATH:/usr/local/bin"
+# Oracle ARM Instance Creator — Off-Peak Edition
+# Runs every 20min via cron, single attempt per run
+# Skips peak windows (handled by create_arm_instance.sh)
 
-# 文件锁 — 防止多实例并行运行
+# ====== Load Configuration ======
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+CONFIG_FILE="${SCRIPT_DIR}/../.env"
+
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "ERROR|Config file not found|Copy .env.example to .env and fill in your values"
+    exit 1
+fi
+source "$CONFIG_FILE"
+
+# Validate required variables
+for var in COMPARTMENT SUBNET_ID IMAGE_ID AD_NAME SSH_KEY; do
+    if [ -z "${!var}" ]; then
+        echo "ERROR|Missing config|$var is not set in .env"
+        exit 1
+    fi
+done
+
+# File lock — prevent parallel execution
 LOCK_FILE="/tmp/ora-arm-offwindow.lock"
 if [ -f "$LOCK_FILE" ] && kill -0 "$(cat "$LOCK_FILE")" 2>/dev/null; then
-    exit 0  # 已有实例在跑，静默退出
+    exit 0
 fi
 echo $$ > "$LOCK_FILE"
 trap 'rm -f "$LOCK_FILE"' EXIT
 
-COMPARTMENT="ocid1.tenancy.oc1..YOUR_TENANCY_OCID"
-SUBNET_ID="ocid1.subnet.oc1.YOUR_SUBNET_OCID"
-IMAGE_ID="ocid1.image.oc1.YOUR_IMAGE_OCID"
-AD_NAME="YOUR_AVAILABILITY_DOMAIN"
-SSH_KEY="$HOME/.ssh/oracle_ssh_key.pub"
-
-# 时间窗口检查 — 如果在主窗口/中午窗口内，跳过（由主 cron 处理）
+# ====== Time Window Check — skip if in peak windows ======
 HOUR=$(TZ='Asia/Shanghai' date +%H)
 if [ "$HOUR" -ge 1 ] && [ "$HOUR" -lt 5 ]; then
     exit 0
@@ -27,7 +37,7 @@ elif [ "$HOUR" -ge 11 ] && [ "$HOUR" -lt 13 ]; then
     exit 0
 fi
 
-# 执行一次创建
+# ====== Create Instance (single attempt) ======
 RESULT=$(oci compute instance launch \
   --compartment-id "$COMPARTMENT" \
   --availability-domain "$AD_NAME" \
@@ -40,13 +50,13 @@ RESULT=$(oci compute instance launch \
   --ssh-authorized-keys-file "$SSH_KEY" \
   2>&1)
 
-# 唯一成功标准
+# ====== Validate Success ======
 INSTANCE_ID=$(echo "$RESULT" | grep -oP '"id":\s*"ocid1\.instance\.[^"]+' | head -1)
 
 if [ -n "$INSTANCE_ID" ]; then
     INSTANCE_OCID=$(echo "$INSTANCE_ID" | sed 's/"id": "//')
     sleep 15
-    # VNIC 查询重试（最多 3 次，间隔 10 秒）
+    # VNIC query with retry (3 attempts, 10s interval)
     PUBLIC_IP=""
     for attempt in 1 2 3; do
         PUBLIC_IP=$(oci compute instance list-vnics \
@@ -60,7 +70,7 @@ if [ -n "$INSTANCE_ID" ]; then
     exit 0
 fi
 
-# 提取错误信息
+# ====== Parse Error ======
 ERROR_CODE=$(echo "$RESULT" | grep -oP '"code":\s*"[^"]*"' | head -1 | sed 's/"code": "//;s/"//')
 ERROR_MSG=$(echo "$RESULT" | grep -oP '"message":\s*"[^"]*"' | head -1 | sed 's/"message": "//;s/"//')
 

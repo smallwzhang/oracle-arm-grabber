@@ -64,26 +64,30 @@ You need a VCN with:
 - Route table (0.0.0.0/0 → IGW)
 - Security list (SSH port 22 inbound)
 
-### 5. Edit Scripts
-
-Update the following variables in both scripts:
+### 5. Configure
 
 ```bash
-COMPARTMENT="ocid1.tenancy.oc1....."      # Your tenancy OCID
-SUBNET_ID="ocid1.subnet.oc1......."       # Your subnet OCID
-IMAGE_ID="ocid1.image.oc1......."         # Ubuntu 24.04 ARM image OCID
-AD_NAME="YOUR-AP-REGION-1-AD-1"           # Your availability domain
-SSH_KEY="$HOME/.ssh/oracle_ssh_key.pub"
+cd oracle-arm-grabber
+cp .env.example .env
+# Edit .env with your values
+nano .env
 ```
+
+Your `.env` file contains:
+- `COMPARTMENT` — Your tenancy OCID
+- `SUBNET_ID` — Your subnet OCID
+- `IMAGE_ID` — Ubuntu 24.04 ARM image OCID
+- `AD_NAME` — Your availability domain
+- `SSH_KEY` — Path to your SSH public key
 
 ### 6. Set Up Cron Jobs
 
 ```bash
 # Peak hours: every 5 minutes (1:00-5:00, 11:00-13:00 CST)
-*/5 * * * * /path/to/scripts/create_arm_instance.sh
+*/5 * * * * /path/to/oracle-arm-grabber/scripts/create_arm_instance.sh
 
 # Off-peak: every 20 minutes (3 attempts/hour, single attempt per run)
-*/20 * * * * /path/to/scripts/create_arm_offwindow.sh
+*/20 * * * * /path/to/oracle-arm-grabber/scripts/create_arm_offwindow.sh
 ```
 
 ## Output Format
@@ -207,17 +211,21 @@ ssh-keygen -t ed25519 -f ~/.ssh/oracle_ssh_key -N ""
 - 路由表（0.0.0.0/0 → IGW）
 - 安全列表（放行 SSH 端口 22 入站）
 
-### 5. 编辑脚本配置
-
-修改两个脚本中的以下变量：
+### 5. 配置
 
 ```bash
-COMPARTMENT="ocid1.tenancy.oc1....."      # 你的 Tenancy OCID
-SUBNET_ID="ocid1.subnet.oc1......."       # 你的子网 OCID
-IMAGE_ID="ocid1.image.oc1......."         # Ubuntu 24.04 ARM 镜像 OCID
-AD_NAME="YOUR-AP-REGION-1-AD-1"           # 你的可用性域名
-SSH_KEY="$HOME/.ssh/oracle_ssh_key.pub"   # SSH 公钥路径
+cd oracle-arm-grabber
+cp .env.example .env
+# 编辑 .env 填入你的值
+nano .env
 ```
+
+`.env` 文件包含：
+- `COMPARTMENT` — 你的 Tenancy OCID
+- `SUBNET_ID` — 你的子网 OCID
+- `IMAGE_ID` — Ubuntu 24.04 ARM 镜像 OCID
+- `AD_NAME` — 你的可用性域名
+- `SSH_KEY` — SSH 公钥路径
 
 ### 6. 设置定时任务
 
@@ -225,10 +233,10 @@ SSH_KEY="$HOME/.ssh/oracle_ssh_key.pub"   # SSH 公钥路径
 crontab -e
 
 # 高峰期：每 5 分钟（凌晨 1-5 点 + 中午 11-13 点，脚本内部自动控制）
-*/5 * * * * /path/to/scripts/create_arm_instance.sh
+*/5 * * * * /path/to/oracle-arm-grabber/scripts/create_arm_instance.sh
 
 # 离峰期：每 20 分钟（其他时段，脚本内部自动控制，每次 1 次尝试）
-*/20 * * * * /path/to/scripts/create_arm_offwindow.sh
+*/20 * * * * /path/to/oracle-arm-grabber/scripts/create_arm_offwindow.sh
 ```
 
 ## 输出格式
